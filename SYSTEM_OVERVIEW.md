@@ -125,7 +125,7 @@ Four roles (`Models\Enums.cs → RoleNames`): **Cashier, Manager, Supplier, Admi
 
 ---
 
-## 6. Data model (13 tables, EF POCOs match SQL schema 1:1)
+## 6. Data model (14 tables, EF POCOs match SQL schema 1:1)
 
 - **Role** → Users
 - **User** — PBKDF2 hash/salt, RoleId, optional SupplierId (for supplier logins), IsActive, LastLoginAt
@@ -140,8 +140,9 @@ Four roles (`Models\Enums.cs → RoleNames`): **Cashier, Manager, Supplier, Admi
 - **Sale** — `RCT-#######`, subtotal/VAT/total, payment method, server-computed change due
 - **SaleLine** — snapshots product name/price/VAT at time of sale (so later price changes don't rewrite history)
 - **CashUp** — server-recomputed expected cash, variance, manager review fields
+- **SecurityEvent** — sign-in/sign-out/failed-attempt and account-management audit trail (UserId + optional ActorUserId, both nullable)
 
-**Schema file:** `App_Data\SmartShelf_Schema.sql` (758 lines) — drops/recreates all tables, adds `CHECK (QuantityOnHand >= 0)`, unique indexes, and seeds roles/suppliers/7 users/categories/products, then **generates ~45 days of synthetic trading history** (movements, shifts, sales, corrections, batches, POs, cash-ups). Safe to re-run.
+**Schema file:** `App_Data\SmartShelf_Schema.sql` — drops/recreates all tables, adds `CHECK (QuantityOnHand >= 0)`, unique indexes, and seeds roles/suppliers/7 users/categories/products, then **generates ~45 days of synthetic trading history** (movements, shifts, sales, corrections, batches, POs, cash-ups), then backfills one `SecurityEvent` SignIn row per seeded user from `LastLoginAt`. Safe to re-run.
 
 ---
 
@@ -159,9 +160,11 @@ Four roles (`Models\Enums.cs → RoleNames`): **Cashier, Manager, Supplier, Admi
 | `SaleService` | Server-side cart pricing, `CompleteSale` (transactional: Sale + SaleLines + StockMovements), `VoidSale` |
 | `CashUpService` | Shift summary, cash-up completion, manager review workflow |
 | `ReportService` | Top sellers, low stock, expiry/waste, supplier performance, dashboard aggregates |
-| `ActivityService` | Merges Sales/StockMovements/CashUps/PO events/logins into one timeline (documents its own blind spots) |
+| `ActivityService` | Merges Sales/StockMovements/CashUps/PO events/`SecurityEvent`s into one timeline |
+| `SecurityEventService` | Writes and reads `SecurityEvent` — sign-ins, sign-outs, failed attempts, account create/update/reset/activate/deactivate |
+| `RoleAccessAudit` | Builds the Admin role/screen matrix by reflecting over every page's `AllowedRoles`, so it can't drift from what's enforced |
 | `AuditReport` | Data backing the Admin self-audit page |
-| `UserService` | Admin account management, password reset, safeguards against deactivating the last Admin |
+| `UserService` | Admin account management, password reset, safeguards against deactivating the last Admin; logs every change via `SecurityEventService` |
 | `CsvWriter` | Shared CSV export logic |
 | `ServiceExceptions` | `BusinessRuleException`, `InsufficientStockException` |
 | `StockStatus` | Single shared "low / reorder soon / healthy" status definition used across Dashboard, Products, Inventory, POS |
@@ -175,25 +178,26 @@ Four roles (`Models\Enums.cs → RoleNames`): **Cashier, Manager, Supplier, Admi
 - Every service method is fully implemented with real transactions and validation.
 - Two pages exist specifically to be honest about limitations rather than hide them (`Admin/SystemAudit.aspx`, `Admin/ActivityLog.aspx`).
 
+**Fixed on 2026-09-12 (previously open items — see git log for the commit):**
+1. `Web.config`'s connection string now matches the README's portable `(localdb)\MSSQLLocalDB` default instead of pointing at a specific developer's SQL Express instance.
+2. `Admin/RolePermissions.aspx` no longer hand-types its role/screen matrix — `Services/RoleAccessAudit.cs` builds it by reflecting over every page's `AllowedRoles` override, so the checkmarks can't drift from what's actually enforced. Only the cosmetic screen name/purpose text is still hand-maintained, and a page missing from that dictionary still shows up (flagged) rather than silently vanishing.
+3. Sign-outs, failed sign-in attempts, and account create/update/password-reset/activate/deactivate events are now recorded in a new `SecurityEvent` table (`Services/SecurityEventService.cs`, called from `AuthService` and `UserService`) and surfaced in `Admin/ActivityLog.aspx` under an **Access** category. One remaining, documented caveat: the table only holds history from the point it was introduced — the seed script backfills one `SignIn` event per user from `LastLoginAt` so a fresh install still has continuous history, but pre-existing installs won't have sign-out/failed-attempt history from before this change.
+4. A dedicated git repository was initialized for this project folder (it previously sat untracked inside an unrelated repo at the user's home directory), with a `.gitignore` for `bin/`, `obj/`, `.vs/`, and `packages/`.
+
 **Known, documented limitations (from README §7 — deliberate, not bugs):**
 1. The 45 days of seeded data is ordinary table data, not synthetic report output.
 2. Product images are either a URL or an uploaded blob (2MB cap, signature-validated) — no third option.
 3. In-process session state won't scale past a single server (would need `SQLServer` session mode for a web farm).
 4. Culture is hard-pinned to `en-GB`.
-5. `ActivityService` explicitly does not record sign-outs, failed logins, or account edits — "absence of an entry is not evidence that nothing happened."
 
-**Minor loose ends:**
-- Connection string in `Web.config` still points at a specific developer's SQL Express instance (`LAPTOP-B5HU784A\SQLEXPRESS`) rather than the README's documented default — reset before handing off to another machine/marker.
+**Minor loose ends still open:**
 - One commented-out dead link in `Site.master` (line ~24) — cosmetic only.
-- `Admin/RolePermissions.aspx` is a hand-maintained doc page, not live enforcement — must be manually kept in sync if roles/folders change.
-
-**Version control note:** this folder is **not currently tracked by its own git repository** — the nearest `.git` root is the user's home directory and belongs to an unrelated project. There is no commit history to mine for SmartShelf specifically. Recommend running `git init` inside the SmartShelf project folder if history tracking is wanted going forward.
+- `UserService.ResetPassword` remains dead code — no page calls it (password resets go through `SaveUser`'s optional password field instead). Flagged in `Services/AuditReport.cs`; low priority since the functionality exists either way.
 
 ---
 
 ## 9. Recommended next steps
 
-1. Initialize a dedicated git repo for this project (currently untracked).
-2. Reset `Web.config`'s connection string to a portable default (or document the required change clearly) before running on a different machine.
-3. Decide whether `Admin/RolePermissions.aspx` should be generated from the same source as the `Web.config`/`SecurePageBase` rules instead of hand-maintained, to remove the "must keep in sync manually" risk.
-4. If sign-out/failed-login/account-edit auditing matters for the marking rubric, extend `ActivityService` to capture those events — currently an acknowledged gap.
+1. If a live database from before 2026-09-12 exists, re-run `App_Data\SmartShelf_Schema.sql` (it drops and recreates everything, including seed data) to pick up the new `SecurityEvent` table — there is no incremental migration path since EF's initializer is disabled.
+2. Consider whether `UserService.ResetPassword` should be wired into a page or removed, since it's currently unreachable dead code.
+3. The one cosmetic dead link in `Site.master` can be removed whenever convenient.
