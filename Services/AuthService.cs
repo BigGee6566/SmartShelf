@@ -35,8 +35,18 @@ namespace SmartShelf.Services
                     .Include(u => u.Role)
                     .FirstOrDefault(u => u.Username == username);
 
-                if (user == null || !user.IsActive) return null;
-                if (!PasswordHasher.Verify(password, user.PasswordSalt, user.PasswordHash)) return null;
+                if (user == null || !user.IsActive)
+                {
+                    SecurityEventService.Log(SecurityEventTypes.SignInFailed, username, null, null,
+                        user == null ? "No account with this username." : "Account is deactivated.");
+                    return null;
+                }
+                if (!PasswordHasher.Verify(password, user.PasswordSalt, user.PasswordHash))
+                {
+                    SecurityEventService.Log(SecurityEventTypes.SignInFailed, username, user.UserId, null,
+                        "Wrong password.");
+                    return null;
+                }
 
                 user.LastLoginAt = DateTime.Now;
                 db.SaveChanges();
@@ -49,6 +59,8 @@ namespace SmartShelf.Services
                     RoleName = user.Role.Name,
                     SupplierId = user.SupplierId
                 };
+
+                SecurityEventService.Log(SecurityEventTypes.SignIn, user.Username, user.UserId, null, null);
 
                 IssueTicket(result, persistent);
                 return result;
@@ -90,6 +102,13 @@ namespace SmartShelf.Services
 
         public static void SignOut()
         {
+            // Capture who is signing out before the ticket that identifies them is cleared.
+            if (CurrentUser.IsSignedIn)
+            {
+                SecurityEventService.Log(SecurityEventTypes.SignOut, CurrentUser.Username,
+                    CurrentUser.UserId, null, null);
+            }
+
             FormsAuthentication.SignOut();
             if (HttpContext.Current.Session != null) HttpContext.Current.Session.Abandon();
         }

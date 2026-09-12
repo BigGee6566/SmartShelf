@@ -285,10 +285,12 @@
     <Compile Include="Services\PasswordHasher.cs" />
     <Compile Include="Services\PurchaseOrderService.cs" />
     <Compile Include="Services\ReportService.cs" />
+    <Compile Include="Services\RoleAccessAudit.cs" />
     <Compile Include="Services\SaleService.cs" />
     <Compile Include="Services\SecurePageBase.cs">
       <SubType>ASPXCodeBehind</SubType>
     </Compile>
+    <Compile Include="Services\SecurityEventService.cs" />
     <Compile Include="Services\ServiceExceptions.cs" />
     <Compile Include="Services\StockStatus.cs" />
     <Compile Include="Services\UserService.cs" />

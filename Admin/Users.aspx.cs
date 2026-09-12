@@ -135,7 +135,8 @@ namespace SmartShelf.Admin
             try
             {
                 UserService.SaveUser(userId, txtUsername.Text, txtFullName.Text, txtEmail.Text,
-                                     roleId, supplier, chkActive.Checked, txtPassword.Text);
+                                     roleId, supplier, chkActive.Checked, txtPassword.Text,
+                                     CurrentUser.UserId);
 
                 alert.ShowSuccess(userId == 0 ? "Account created." : "Account updated.");
                 ResetForm();

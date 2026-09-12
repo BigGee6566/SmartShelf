@@ -45,13 +45,15 @@ namespace SmartShelf.Services
     }
 
     /// <summary>
-    /// Builds the admin activity feed out of the history the system already keeps. Nothing here
-    /// writes, and no new audit table was introduced - StockMovement, Sale, CashUp, PurchaseOrder
-    /// and User.LastLoginAt between them already record who did what and when.
+    /// Builds the admin activity feed out of the history the system keeps. StockMovement, Sale,
+    /// CashUp and PurchaseOrder record trading activity; SecurityEvent (written by AuthService and
+    /// UserService) records sign-ins, sign-outs, failed sign-in attempts and account management.
     /// <para>
-    /// Known blind spot, stated on the page itself: sign-outs, failed sign-in attempts and edits
-    /// to a user account are not stored anywhere, so they cannot appear here. Absence of an entry
-    /// is not evidence that nothing happened.
+    /// SecurityEvent only holds events from the point it was introduced onward - anything from
+    /// before that still shows only as the single most-recent-sign-in snapshot on User.LastLoginAt
+    /// (the seed script backfills one SignIn event per user from that column, so a fresh install
+    /// has continuous history). Absence of an entry from before SecurityEvent existed is not
+    /// evidence that nothing happened.
     /// </para>
     /// </summary>
     public static class ActivityService
@@ -327,40 +329,53 @@ namespace SmartShelf.Services
         }
 
         /// <summary>
-        /// Sign-ins are the one access event the system stores, and only the most recent one per
-        /// account - User.LastLoginAt is overwritten each time, so this is a current-state
-        /// snapshot rather than a history.
+        /// Sign-ins, sign-outs, failed sign-in attempts, and admin account-management actions, read
+        /// from SecurityEvent.
         /// </summary>
         private static IEnumerable<ActivityEntry> FromLogins(SmartShelfContext db, DateTime? start,
             DateTime? end, int? userId, int cap)
         {
-            var q = db.Users.AsNoTracking().Where(u => u.LastLoginAt != null);
+            var events = SecurityEventService.GetEvents(start, end, userId, cap);
 
-            if (start.HasValue) q = q.Where(u => u.LastLoginAt >= start.Value);
-            if (end.HasValue) q = q.Where(u => u.LastLoginAt < end.Value);
-            if (userId.HasValue) q = q.Where(u => u.UserId == userId.Value);
-
-            var rows = q.OrderByDescending(u => u.LastLoginAt)
-                .Take(cap)
-                .Select(u => new
-                {
-                    u.LastLoginAt,
-                    u.FullName,
-                    u.Username,
-                    RoleName = u.Role.Name
-                })
-                .ToList();
-
-            return rows.Select(r => new ActivityEntry
+            return events.Select(x => new ActivityEntry
             {
-                When = r.LastLoginAt.Value,
-                Who = r.FullName,
-                Role = r.RoleName,
+                When = x.CreatedAt,
+                Who = x.User != null ? x.User.FullName : x.Username,
+                Role = x.User != null && x.User.Role != null ? x.User.Role.Name : string.Empty,
                 Category = CatAccess,
-                Action = "Signed in",
-                Detail = "Most recent sign-in for " + r.Username,
+                Action = ActionLabel(x),
+                Detail = DetailFor(x),
                 Reference = string.Empty
             });
+        }
+
+        private static string ActionLabel(SecurityEvent x)
+        {
+            switch (x.EventType)
+            {
+                case SecurityEventTypes.SignIn: return "Signed in";
+                case SecurityEventTypes.SignInFailed: return "Sign-in failed";
+                case SecurityEventTypes.SignOut: return "Signed out";
+                case SecurityEventTypes.AccountCreated: return "Account created";
+                case SecurityEventTypes.AccountUpdated: return "Account updated";
+                case SecurityEventTypes.PasswordReset: return "Password reset";
+                case SecurityEventTypes.AccountActivated: return "Account reactivated";
+                case SecurityEventTypes.AccountDeactivated: return "Account deactivated";
+                default: return x.EventType;
+            }
+        }
+
+        private static string DetailFor(SecurityEvent x)
+        {
+            var actor = x.ActorUser != null
+                ? " by " + x.ActorUser.FullName + (x.ActorUser.Role != null ? " (" + x.ActorUser.Role.Name + ")" : string.Empty)
+                : string.Empty;
+
+            var detail = x.EventType == SecurityEventTypes.SignInFailed
+                ? "Attempted username: " + x.Username
+                : "Account: " + x.Username;
+
+            return detail + actor + (string.IsNullOrWhiteSpace(x.Detail) ? string.Empty : ". " + x.Detail);
         }
 
         private static string MovementLabel(MovementType type)

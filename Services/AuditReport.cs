@@ -152,7 +152,8 @@ namespace SmartShelf.Services
                     Implemented = Y, Tables = Y, ScreenMatch = P, ReportWorks = N,
                     Notes = "Login.aspx works, PBKDF2-verified, one login screen for all four roles. Reads User + Role. " +
                             "The Matrix gives SC1 to both Register and Login - two different screens cannot share a code. " +
-                            "No user audit log report; only User.LastLoginAt is stored." },
+                            "A SecurityEvent table now records sign-ins, sign-outs, failed attempts and account changes " +
+                            "(Admin/ActivityLog.aspx); User.LastLoginAt remains as a quick current-state field." },
 
                 new CoverageRow { UseCase = "UC3 Forgot password", Screen = "SC3 Password Reset",
                     Implemented = N, Tables = N, ScreenMatch = N, ReportWorks = N,

@@ -411,4 +411,47 @@ namespace SmartShelf.Models
         [NotMapped]
         public bool NeedsReview { get { return Variance != 0m && ReviewedAt == null; } }
     }
+
+    // ------------------------------------------------------------------
+    // Access and account auditing
+    // ------------------------------------------------------------------
+
+    /// <summary>
+    /// One access or account-management event: a sign-in, a sign-out, a failed sign-in attempt, or
+    /// an admin creating/editing/activating/deactivating an account or resetting a password. Closes
+    /// the gap SmartShelf originally shipped with, where only the most recent successful sign-in
+    /// was retained (User.LastLoginAt, overwritten each time) and everything else went unrecorded.
+    /// </summary>
+    public class SecurityEvent
+    {
+        public int SecurityEventId { get; set; }
+
+        /// <summary>One of the SmartShelf.Models.SecurityEventTypes constants.</summary>
+        [Required, StringLength(30)]
+        public string EventType { get; set; }
+
+        /// <summary>
+        /// The username involved, captured even when it does not resolve to an account - a failed
+        /// sign-in attempt against a typo'd or nonexistent username is still worth keeping.
+        /// </summary>
+        [Required, StringLength(50)]
+        public string Username { get; set; }
+
+        /// <summary>The account this event happened to, when it resolved to one.</summary>
+        public int? UserId { get; set; }
+        public virtual User User { get; set; }
+
+        /// <summary>
+        /// Who performed the action, for admin-driven events (account created/updated, password
+        /// reset, activated/deactivated). Null for self-service events (sign-in, sign-out, failed
+        /// sign-in), where the subject and the actor are the same person.
+        /// </summary>
+        public int? ActorUserId { get; set; }
+        public virtual User ActorUser { get; set; }
+
+        [StringLength(300)]
+        public string Detail { get; set; }
+
+        public DateTime CreatedAt { get; set; }
+    }
 }

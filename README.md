@@ -117,10 +117,12 @@ Two screens under **Admin** exist for checking the system rather than running it
 
 - **System Activity** (`Admin/ActivityLog.aspx`) — one timeline of everything the system has
   recorded: sales, stock movements and adjustments, write-offs, cash-ups and their sign-off,
-  and purchase order progress. Filter by date, staff member or activity type, and export to CSV.
-  It is assembled by `Services/ActivityService.cs` from the tables the system already writes —
-  there is no separate audit table. Sign-outs, failed sign-ins and account edits are not recorded
-  anywhere, and the page says so, so an empty log is never mistaken for proof that nothing happened.
+  and purchase order progress, plus an **Access** category covering sign-ins, sign-outs, failed
+  sign-in attempts and account changes. Trading activity is assembled by `Services/ActivityService.cs`
+  straight from the tables the system already writes; Access events are written as they happen to a
+  dedicated `SecurityEvent` table (see `Services/SecurityEventService.cs`, called from `AuthService`
+  and `UserService`). `SecurityEvent` only holds history from the point it was introduced, so a page
+  note still flags that an empty Access log from before then is not proof nothing happened.
 - **System Audit** (`Admin/SystemAudit.aspx`) — the written verification of this build against the
   System Matrix: a coverage row per use case, the findings by severity with the evidence behind
   each one, and a live panel of row counts so a reader can tell whether the system still matches

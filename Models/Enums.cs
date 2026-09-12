@@ -55,4 +55,17 @@ namespace SmartShelf.Models
         public const string Supplier = "Supplier";
         public const string Admin = "Admin";
     }
+
+    /// <summary>EventType values written to SecurityEvent by SecurityEventService.</summary>
+    public static class SecurityEventTypes
+    {
+        public const string SignIn = "SignIn";
+        public const string SignInFailed = "SignInFailed";
+        public const string SignOut = "SignOut";
+        public const string AccountCreated = "AccountCreated";
+        public const string AccountUpdated = "AccountUpdated";
+        public const string PasswordReset = "PasswordReset";
+        public const string AccountActivated = "AccountActivated";
+        public const string AccountDeactivated = "AccountDeactivated";
+    }
 }

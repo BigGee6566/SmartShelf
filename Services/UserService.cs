@@ -44,7 +44,8 @@ namespace SmartShelf.Services
         /// leaving it blank keeps the existing hash rather than blanking the password.
         /// </summary>
         public static int SaveUser(int userId, string username, string fullName, string email,
-                                   int roleId, int? supplierId, bool isActive, string newPassword)
+                                   int roleId, int? supplierId, bool isActive, string newPassword,
+                                   int actingUserId)
         {
             if (string.IsNullOrWhiteSpace(username))
                 throw new BusinessRuleException("A username is required.");
@@ -74,7 +75,8 @@ namespace SmartShelf.Services
                     throw new BusinessRuleException("The username \"" + name + "\" is already taken.");
 
                 User user;
-                if (userId == 0)
+                bool isNew = userId == 0;
+                if (isNew)
                 {
                     if (string.IsNullOrEmpty(newPassword))
                         throw new BusinessRuleException("A password is required for a new account.");
@@ -95,7 +97,8 @@ namespace SmartShelf.Services
                 user.SupplierId = supplierId;
                 user.IsActive = isActive;
 
-                if (!string.IsNullOrEmpty(newPassword))
+                var passwordChanged = !string.IsNullOrEmpty(newPassword);
+                if (passwordChanged)
                 {
                     ValidatePasswordStrength(newPassword);
                     user.PasswordSalt = PasswordHasher.CreateSalt();
@@ -103,11 +106,17 @@ namespace SmartShelf.Services
                 }
 
                 db.SaveChanges();
+
+                SecurityEventService.Log(
+                    isNew ? SecurityEventTypes.AccountCreated : SecurityEventTypes.AccountUpdated,
+                    user.Username, user.UserId, actingUserId,
+                    isNew ? null : passwordChanged ? "Password also changed." : (string)null);
+
                 return user.UserId;
             }
         }
 
-        public static void ResetPassword(int userId, string newPassword)
+        public static void ResetPassword(int userId, string newPassword, int actingUserId)
         {
             ValidatePasswordStrength(newPassword);
 
@@ -119,6 +128,9 @@ namespace SmartShelf.Services
                 user.PasswordSalt = PasswordHasher.CreateSalt();
                 user.PasswordHash = PasswordHasher.Hash(newPassword, user.PasswordSalt);
                 db.SaveChanges();
+
+                SecurityEventService.Log(SecurityEventTypes.PasswordReset, user.Username, user.UserId,
+                    actingUserId, null);
             }
         }
 
@@ -144,6 +156,10 @@ namespace SmartShelf.Services
 
                 user.IsActive = isActive;
                 db.SaveChanges();
+
+                SecurityEventService.Log(
+                    isActive ? SecurityEventTypes.AccountActivated : SecurityEventTypes.AccountDeactivated,
+                    user.Username, user.UserId, actingUserId, null);
             }
         }
 

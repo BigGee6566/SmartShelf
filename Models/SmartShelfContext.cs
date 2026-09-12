@@ -25,6 +25,7 @@ namespace SmartShelf.Models
         public DbSet<Sale> Sales { get; set; }
         public DbSet<SaleLine> SaleLines { get; set; }
         public DbSet<CashUp> CashUps { get; set; }
+        public DbSet<SecurityEvent> SecurityEvents { get; set; }
 
         protected override void OnModelCreating(DbModelBuilder mb)
         {
@@ -165,6 +166,20 @@ namespace SmartShelf.Models
                 .HasOptional(c => c.ReviewedByUser)
                 .WithMany()
                 .HasForeignKey(c => c.ReviewedByUserId)
+                .WillCascadeOnDelete(false);
+
+            // Both sides are optional: UserId may be unresolved (a failed sign-in against a
+            // nonexistent username) and ActorUserId is only set for admin-driven events.
+            mb.Entity<SecurityEvent>()
+                .HasOptional(x => x.User)
+                .WithMany()
+                .HasForeignKey(x => x.UserId)
+                .WillCascadeOnDelete(false);
+
+            mb.Entity<SecurityEvent>()
+                .HasOptional(x => x.ActorUser)
+                .WithMany()
+                .HasForeignKey(x => x.ActorUserId)
                 .WillCascadeOnDelete(false);
 
             base.OnModelCreating(mb);

@@ -100,20 +100,20 @@
     </asp:PlaceHolder>
   </div>
 
-  <%-- Being explicit about the blind spot matters: a reader must not treat an empty log as
-       proof that nothing happened. --%>
+  <%-- Being explicit about the one remaining gap matters: a reader must not treat an empty log
+       as proof that nothing happened. --%>
   <div class="app-card" style="margin-top:22px;">
     <div class="card-head"><h4>What this log does and doesn&#39;t cover</h4></div>
     <p class="muted" style="font-size:14px;">
       Every entry above is drawn from the records the system writes as it runs &mdash; stock movements,
-      sales, cash-ups and purchase orders. Each one names the staff member responsible, and none of it
-      can be edited from any screen.
+      sales, cash-ups, purchase orders, and sign-ins/sign-outs/account changes (the <strong>Access</strong>
+      category). Each one names the staff member responsible, and none of it can be edited from any screen.
     </p>
     <p class="muted" style="font-size:14px;margin-top:12px;">
-      <strong>Not recorded anywhere, so not shown here:</strong> sign-outs, failed sign-in attempts,
-      and changes made to a user account. Sign-ins appear only as the <em>most recent</em> one per
-      account, because that is all the system stores. Absence of an entry is not evidence that
-      nothing happened.
+      <strong>One gap remains:</strong> the access trail only holds events from the point it was
+      introduced onward. Anything from before that appears only as a single backfilled sign-in per
+      account, taken from the last-login timestamp the system already kept. Absence of an Access
+      entry from before that point is not evidence that nothing happened.
     </p>
   </div>
 

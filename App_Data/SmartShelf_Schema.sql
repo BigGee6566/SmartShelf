@@ -32,6 +32,7 @@ GO
 /* ---------------------------------------------------------------------------
    1. Drop existing objects (child tables first so FKs never block the drop)
    --------------------------------------------------------------------------- */
+IF OBJECT_ID('dbo.SecurityEvent', 'U')      IS NOT NULL DROP TABLE dbo.SecurityEvent;
 IF OBJECT_ID('dbo.CashUp', 'U')            IS NOT NULL DROP TABLE dbo.CashUp;
 IF OBJECT_ID('dbo.SaleLine', 'U')          IS NOT NULL DROP TABLE dbo.SaleLine;
 IF OBJECT_ID('dbo.Sale', 'U')              IS NOT NULL DROP TABLE dbo.Sale;
@@ -276,6 +277,24 @@ CREATE TABLE dbo.CashUp (
     CONSTRAINT FK_CashUp_Reviewer FOREIGN KEY (ReviewedByUserId) REFERENCES dbo.[User](UserId)
 );
 CREATE UNIQUE INDEX IX_CashUp_Shift ON dbo.CashUp(ShiftId);
+GO
+
+-- Access and account-management audit trail: sign-ins (successful and failed), sign-outs, and
+-- admin actions on accounts. UserId/ActorUserId are both nullable - a failed sign-in against a
+-- nonexistent username never resolves to a UserId, and only admin-driven events have an actor.
+CREATE TABLE dbo.SecurityEvent (
+    SecurityEventId INT IDENTITY(1,1) NOT NULL CONSTRAINT PK_SecurityEvent PRIMARY KEY,
+    EventType       NVARCHAR(30)  NOT NULL,
+    Username        NVARCHAR(50)  NOT NULL,
+    UserId          INT           NULL,
+    ActorUserId     INT           NULL,
+    Detail          NVARCHAR(300) NULL,
+    CreatedAt       DATETIME      NOT NULL,
+    CONSTRAINT FK_SecurityEvent_User  FOREIGN KEY (UserId)      REFERENCES dbo.[User](UserId),
+    CONSTRAINT FK_SecurityEvent_Actor FOREIGN KEY (ActorUserId) REFERENCES dbo.[User](UserId)
+);
+CREATE INDEX IX_SecurityEvent_CreatedAt ON dbo.SecurityEvent(CreatedAt DESC);
+CREATE INDEX IX_SecurityEvent_UserId    ON dbo.SecurityEvent(UserId);
 GO
 
 PRINT 'Schema created.';
@@ -742,6 +761,17 @@ GO
 PRINT 'Cash-ups created.';
 GO
 
+-- Backfill one SignIn event per seeded user's last login, so the access audit trail (Admin >
+-- System Activity) has real history from first run rather than starting empty.
+INSERT INTO dbo.SecurityEvent (EventType, Username, UserId, ActorUserId, Detail, CreatedAt)
+SELECT 'SignIn', Username, UserId, NULL, 'Backfilled from the seed data''s LastLoginAt.', LastLoginAt
+FROM dbo.[User]
+WHERE LastLoginAt IS NOT NULL;
+GO
+
+PRINT 'Security events backfilled.';
+GO
+
 /* ---------- Summary ---------- */
 SELECT 'Products'        AS TableName, COUNT(*) AS [Rows] FROM dbo.Product
 UNION ALL SELECT 'Users',           COUNT(*) FROM dbo.[User]
@@ -751,7 +781,8 @@ UNION ALL SELECT 'Sale lines',      COUNT(*) FROM dbo.SaleLine
 UNION ALL SELECT 'Stock movements', COUNT(*) FROM dbo.StockMovement
 UNION ALL SELECT 'Stock batches',   COUNT(*) FROM dbo.StockBatch
 UNION ALL SELECT 'Purchase orders', COUNT(*) FROM dbo.PurchaseOrder
-UNION ALL SELECT 'Cash-ups',        COUNT(*) FROM dbo.CashUp;
+UNION ALL SELECT 'Cash-ups',        COUNT(*) FROM dbo.CashUp
+UNION ALL SELECT 'Security events', COUNT(*) FROM dbo.SecurityEvent;
 GO
 
 PRINT 'SmartShelf seed complete.';
