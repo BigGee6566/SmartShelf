@@ -1,0 +1,57 @@
+<%@ Master Language="C#" AutoEventWireup="true" CodeBehind="App.master.cs" Inherits="SmartShelf.AppMaster" %>
+<!DOCTYPE html>
+<html lang="en">
+<head runat="server">
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title><asp:ContentPlaceHolder ID="TitleContent" runat="server">SmartShelf</asp:ContentPlaceHolder></title>
+    <link rel="stylesheet" href="<%: ResolveUrl("~/Styles/site.css") %>" />
+    <asp:ContentPlaceHolder ID="HeadContent" runat="server" />
+</head>
+<body>
+<form id="appForm" runat="server">
+<asp:ScriptManager ID="sm" runat="server" EnablePartialRendering="true" />
+
+<div class="app-shell">
+  <aside class="app-sidebar">
+    <a href="<%: ResolveUrl("~/Default.aspx") %>" class="brand"><span class="dot"></span>SmartShelf</a>
+
+    <%-- Links are generated from the signed-in role, so no screen is ever advertised to
+         someone who would be bounced by the authorization rules. --%>
+    <asp:Repeater ID="rptNav" runat="server" OnItemDataBound="rptNav_ItemDataBound">
+      <ItemTemplate>
+        <asp:Literal ID="litGroup" runat="server" />
+        <asp:HyperLink ID="lnkNav" runat="server" />
+      </ItemTemplate>
+    </asp:Repeater>
+
+    <div class="sidebar-foot">
+      Signed in as
+      <strong><asp:Literal ID="litUser" runat="server" /></strong>
+    </div>
+    <asp:LinkButton ID="btnSignOut" runat="server" OnClick="btnSignOut_Click" CausesValidation="false"
+                    Text="&larr; Sign out" style="margin-top:10px;" />
+  </aside>
+
+  <main class="app-main">
+    <div class="app-topbar">
+      <div>
+        <h1><asp:Literal ID="litTitle" runat="server" /></h1>
+        <div class="topbar-sub"><asp:Literal ID="litSubtitle" runat="server" /></div>
+      </div>
+      <div class="topbar-actions">
+        <asp:ContentPlaceHolder ID="TopbarContent" runat="server" />
+      </div>
+    </div>
+
+    <div class="app-content">
+      <asp:ContentPlaceHolder ID="MainContent" runat="server" />
+    </div>
+  </main>
+</div>
+
+<asp:ContentPlaceHolder ID="ModalContent" runat="server" />
+
+</form>
+</body>
+</html>

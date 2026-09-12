@@ -1,0 +1,76 @@
+<%@ Master Language="C#" AutoEventWireup="true" CodeBehind="Site.master.cs" Inherits="SmartShelf.SiteMaster" %>
+<!DOCTYPE html>
+<html lang="en">
+<head runat="server">
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title><asp:ContentPlaceHolder ID="TitleContent" runat="server">SmartShelf</asp:ContentPlaceHolder></title>
+    <link rel="stylesheet" href="<%: ResolveUrl("~/Styles/site.css") %>" />
+    <asp:ContentPlaceHolder ID="HeadContent" runat="server" />
+</head>
+<body>
+<form id="mainForm" runat="server">
+
+<nav class="site-nav">
+  <div class="wrap">
+    <a href="<%: ResolveUrl("~/Default.aspx") %>" class="brand"><span class="dot"></span>SmartShelf</a>
+    <div class="nav-links">
+      <a href="<%: ResolveUrl("~/Default.aspx") %>#features">Features</a>
+      <a href="<%: ResolveUrl("~/Default.aspx") %>#roles">Who it&#39;s for</a>
+      <a href="<%: ResolveUrl("~/Default.aspx") %>#how">How it works</a>
+    </div>
+    <div class="nav-cta">
+      <asp:PlaceHolder ID="phSignedOut" runat="server">
+       <%-- <a href="<%: ResolveUrl("~/Login.aspx") %>" class="btn btn-ghost btn-sm">Li</a>--%>
+        <a href="<%: ResolveUrl("~/Login.aspx") %>" class="btn btn-primary btn-sm">Open the till &rarr;</a>
+      </asp:PlaceHolder>
+      <asp:PlaceHolder ID="phSignedIn" runat="server" Visible="false">
+        <asp:HyperLink ID="lnkWorkspace" runat="server" CssClass="btn btn-primary btn-sm" />
+      </asp:PlaceHolder>
+    </div>
+  </div>
+</nav>
+
+<asp:ContentPlaceHolder ID="MainContent" runat="server" />
+
+<footer>
+  <div class="wrap">
+    <div class="footer-grid">
+      <div>
+        <div class="brand" style="margin-bottom:14px;"><span class="dot"></span>SmartShelf</div>
+        <p class="muted" style="font-size:14px;max-width:260px;">A supermarket management system built for the Forte Supermarket scenario &mdash; IFS303E, Systems Development Project.</p>
+      </div>
+      <div>
+        <h5>Product</h5>
+        <ul>
+          <li><a href="<%: ResolveUrl("~/Default.aspx") %>#features">Features</a></li>
+          <li><a href="<%: ResolveUrl("~/Default.aspx") %>#roles">Roles</a></li>
+          <li><a href="<%: ResolveUrl("~/Login.aspx") %>">Live demo</a></li>
+        </ul>
+      </div>
+      <div>
+        <h5>Workspaces</h5>
+        <ul>
+          <li><a href="<%: ResolveUrl("~/Login.aspx") %>">Sign in</a></li>
+          <li><a href="<%: ResolveUrl("~/Login.aspx") %>?role=Cashier">POS terminal</a></li>
+          <li><a href="<%: ResolveUrl("~/Login.aspx") %>?role=Manager">Store dashboard</a></li>
+        </ul>
+      </div>
+      <div>
+        <h5>Project</h5>
+        <ul>
+          <li>CoreLink</li>
+          <li>IFS303E &mdash; University of Fort Hare</li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>&copy; <%: DateTime.Now.Year %> CoreLink. Built for coursework, not commercial use.</span>
+      <span>Photography via Pexels</span>
+    </div>
+  </div>
+</footer>
+
+</form>
+</body>
+</html>
