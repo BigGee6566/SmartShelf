@@ -52,6 +52,18 @@
       <span class="tag"><asp:Literal ID="litItemCount" runat="server" /></span>
     </div>
 
+      <div style="display:flex;justify-content:space-between;font-family:var(--font-display);font-size:24px;font-weight:600;color:var(--color-primary-dark);">
+  <span>Total</span><span><asp:Literal ID="litTotal" runat="server" /></span>
+</div>
+
+      <asp:Button ID="btnPay" runat="server" Text="Proceed to Payment &rarr;" CssClass="btn btn-primary"
+            style="width:100%;justify-content:center;margin-top:18px;padding:14px;"
+            OnClick="btnPay_Click" CausesValidation="false" />
+<asp:Button ID="btnVoid" runat="server" Text="Void Sale" CssClass="btn btn-ghost btn-sm"
+            style="width:100%;justify-content:center;margin-top:8px;"
+            OnClick="btnVoid_Click" CausesValidation="false"
+            OnClientClick="return confirm('Clear this whole sale?');" />
+
     <asp:Repeater ID="rptCart" runat="server" OnItemCommand="rptCart_ItemCommand">
       <ItemTemplate>
         <div class="cart-item">
@@ -90,18 +102,10 @@
       <div style="display:flex;justify-content:space-between;font-size:13.5px;color:var(--color-muted);margin-bottom:10px;">
         <span>VAT</span><span><asp:Literal ID="litVat" runat="server" /></span>
       </div>
-      <div style="display:flex;justify-content:space-between;font-family:var(--font-display);font-size:24px;font-weight:600;color:var(--color-primary-dark);">
-        <span>Total</span><span><asp:Literal ID="litTotal" runat="server" /></span>
-      </div>
+      
     </div>
 
-    <asp:Button ID="btnPay" runat="server" Text="Proceed to Payment &rarr;" CssClass="btn btn-primary"
-                style="width:100%;justify-content:center;margin-top:18px;padding:14px;"
-                OnClick="btnPay_Click" CausesValidation="false" />
-    <asp:Button ID="btnVoid" runat="server" Text="Void Sale" CssClass="btn btn-ghost btn-sm"
-                style="width:100%;justify-content:center;margin-top:8px;"
-                OnClick="btnVoid_Click" CausesValidation="false"
-                OnClientClick="return confirm('Clear this whole sale?');" />
+    
   </div>
 </div>
 </asp:Content>
